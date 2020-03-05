@@ -1,6 +1,11 @@
 var foreground = "#000000";
 var background = "#FFFFFF";
+var playerColor = "#3333FF";
 var defaultDim = 640;
+var boundWidth = 0.05;
+var gravity = 0.001;
+var bounds;
+var speed = 0.005;
 $(document).ready(function () {
     var canvas = document.getElementById("main_canvas");
     var ctx = canvas.getContext("2d");
@@ -8,7 +13,21 @@ $(document).ready(function () {
     canvas.width = canvas.height = dim;
     var player = new Player(canvas.width);
     player.draw(ctx);
+    bounds = fillBounds(dim);
+    drawAll(bounds, ctx);
 });
+function tick() {
+}
+function drawAll(objects, ctx) {
+    objects.forEach(function (e) { return e.draw(ctx); });
+}
+function fillBounds(dim) {
+    var returnArray = [];
+    for (var i = 0; i < 1 / boundWidth; i++) {
+        returnArray.push(new Bounds(boundWidth * dim * i, boundWidth * dim, 0.1 * dim, 0.8 * dim, dim));
+    }
+    return returnArray;
+}
 var CollideRect = /** @class */ (function () {
     function CollideRect(x, y, w, h) {
         this.x = x;
@@ -50,11 +69,12 @@ var Player = /** @class */ (function () {
         this.size = Math.ceil(dim * 0.02);
     }
     Player.prototype.draw = function (ctx) {
-        ctx.fillStyle = foreground;
+        ctx.fillStyle = playerColor;
         ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
     };
-    Player.prototype.tick = function () {
-        this.y += this.accel;
+    Player.prototype.tick = function (dim) {
+        this.y += this.accel * dim;
+        this.accel += gravity;
     };
     Player.prototype.corners = function () {
         return [this.x - this.size / 2, this.y - this.size / 2, this.x + this.size / 2, this.y + this.size / 2];

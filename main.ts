@@ -1,7 +1,15 @@
 
 const foreground = "#000000";
 const background = "#FFFFFF";
+const playerColor = "#3333FF";
+
 const defaultDim = 640;
+const boundWidth = 0.05;
+
+const gravity = 0.001;
+
+let bounds: Bounds[];
+let speed: number = 0.005;
 
 $(document).ready(() => {
     let canvas = document.getElementById("main_canvas") as HTMLCanvasElement;
@@ -12,7 +20,26 @@ $(document).ready(() => {
 
     let player = new Player(canvas.width);
     player.draw(ctx);
+
+    bounds = fillBounds(dim);
+    drawAll(bounds, ctx);
 });
+
+function tick() {
+
+}
+
+function drawAll(objects: IDrawable[], ctx: CanvasRenderingContext2D) {
+    objects.forEach(e => e.draw(ctx));
+}
+
+function fillBounds(dim: number): Bounds[] {
+    let returnArray: Bounds[] = [];
+    for (let i = 0; i < 1/boundWidth; i++) {
+        returnArray.push(new Bounds(boundWidth * dim * i, boundWidth * dim, 0.1 * dim, 0.8 * dim, dim));
+    }
+    return returnArray;
+}
 
 interface ICollideable {
     collide(player: Player): boolean;
@@ -56,7 +83,7 @@ class Bounds implements ICollideable, IDrawable {
     }
 }
 
-class Player {
+class Player implements IDrawable {
     x: number;
     y: number;
     size: number;
@@ -70,12 +97,13 @@ class Player {
     }
 
     draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = foreground;
+        ctx.fillStyle = playerColor;
         ctx.fillRect(this.x-this.size/2, this.y-this.size/2, this.size, this.size);
     }
 
-    tick() {
-        this.y += this.accel;
+    tick(dim: number) {
+        this.y += this.accel * dim;
+        this.accel += gravity;
     }
 
     corners(): number[] {
