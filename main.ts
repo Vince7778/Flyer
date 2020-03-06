@@ -14,7 +14,7 @@ const boundDistSpeed = -0.00008;
 const minBoundDist = 0.3;
 const stepDist = 0.04;
 const margin = 0.02;
-const gameAccel = 0.0000008;
+const gameAccel = 0.0000016;
 const wallH = 0.25;
 
 let bounds: Bound[];
@@ -29,12 +29,7 @@ let state: string = "paused";
 let countdownTime: number = 3;
 
 $(document).ready(() => {
-
-    $("#start").click(() => {
-        if (state == "paused") {
-            state = "countdown";
-        }
-    });
+    
     $("#restart").click(() => {
         restart();
     })
@@ -69,10 +64,15 @@ $(document).ready(() => {
     tick();
 });
 
-$(document).click(e => {
+$(document).mousedown(e => {
     let target = $(e.target);
-    if (!target.is("button") && !target.is("a") && state == "playing") {
-        player.jump();
+    if (!target.is("button") && !target.is("a")) {
+        e.preventDefault();
+        if (state == "playing") {
+            player.jump();
+        } else if (state == "paused") {
+            state = "countdown";
+        }
     }
 });
 
@@ -110,6 +110,9 @@ function tick() {
             break;
         case "ended":
             endedTick();
+            break;
+        case "paused":
+            pausedTick();
             break;
         default:
             drawScreen(ctx);
@@ -210,6 +213,14 @@ function endedTick() {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     bgText(ctx, "Score: "+String(score), 1/2, 1/2, 1/10);
+}
+
+function pausedTick() {
+    drawScreen(ctx);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    bgText(ctx, "Click to start", 1/2, 1/2, 1/12);
 }
 
 function bgText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, fontSize: number, shadowSize: number = 1) {

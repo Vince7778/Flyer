@@ -24,7 +24,7 @@ var boundDistSpeed = -0.00008;
 var minBoundDist = 0.3;
 var stepDist = 0.04;
 var margin = 0.02;
-var gameAccel = 0.0000008;
+var gameAccel = 0.0000016;
 var wallH = 0.25;
 var bounds;
 var walls;
@@ -37,11 +37,6 @@ var boundDist = 0.6;
 var state = "paused";
 var countdownTime = 3;
 $(document).ready(function () {
-    $("#start").click(function () {
-        if (state == "paused") {
-            state = "countdown";
-        }
-    });
     $("#restart").click(function () {
         restart();
     });
@@ -68,10 +63,16 @@ $(document).ready(function () {
     drawScreen(ctx);
     tick();
 });
-$(document).click(function (e) {
+$(document).mousedown(function (e) {
     var target = $(e.target);
-    if (!target.is("button") && !target.is("a") && state == "playing") {
-        player.jump();
+    if (!target.is("button") && !target.is("a")) {
+        e.preventDefault();
+        if (state == "playing") {
+            player.jump();
+        }
+        else if (state == "paused") {
+            state = "countdown";
+        }
     }
 });
 $(window).resize(function () {
@@ -105,6 +106,9 @@ function tick() {
             break;
         case "ended":
             endedTick();
+            break;
+        case "paused":
+            pausedTick();
             break;
         default:
             drawScreen(ctx);
@@ -182,6 +186,12 @@ function endedTick() {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     bgText(ctx, "Score: " + String(score), 1 / 2, 1 / 2, 1 / 10);
+}
+function pausedTick() {
+    drawScreen(ctx);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    bgText(ctx, "Click to start", 1 / 2, 1 / 2, 1 / 12);
 }
 function bgText(ctx, text, x, y, fontSize, shadowSize) {
     if (shadowSize === void 0) { shadowSize = 1; }
