@@ -9,7 +9,7 @@ const minTextSize = 11;
 
 const boundWidth = 0.05;
 const gravity = 0.00011;
-const jumpAccel = -0.0035;
+const jumpAccel = -0.004;
 const boundDistSpeed = -0.00008;
 const minBoundDist = 0.3;
 const stepDist = 0.04;
@@ -71,7 +71,7 @@ $(document).ready(() => {
 
 $(document).click(e => {
     let target = $(e.target);
-    if (!target.is("button")) {
+    if (!target.is("button") && !target.is("a") && state == "playing") {
         player.jump();
     }
 });

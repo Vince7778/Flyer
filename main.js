@@ -19,7 +19,7 @@ var defaultDim = 640;
 var minTextSize = 11;
 var boundWidth = 0.05;
 var gravity = 0.00011;
-var jumpAccel = -0.0035;
+var jumpAccel = -0.004;
 var boundDistSpeed = -0.00008;
 var minBoundDist = 0.3;
 var stepDist = 0.04;
@@ -70,7 +70,7 @@ $(document).ready(function () {
 });
 $(document).click(function (e) {
     var target = $(e.target);
-    if (!target.is("button")) {
+    if (!target.is("button") && !target.is("a") && state == "playing") {
         player.jump();
     }
 });
