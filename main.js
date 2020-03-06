@@ -16,6 +16,7 @@ var background = "#FFFFFF";
 var playerColor = "#0000AA";
 var wallColor = "#AA0000";
 var defaultDim = 640;
+var minTextSize = 11;
 var boundWidth = 0.05;
 var gravity = 0.00011;
 var jumpAccel = -0.005;
@@ -41,17 +42,36 @@ $(document).ready(function () {
             state = "countdown";
         }
     });
-    var canvas = document.getElementById("main_canvas");
+    $(window).resize(function () {
+        var canvasElem = $("#main-canvas");
+        var canvas = canvasElem[0];
+        var cwidth = Math.min(canvasElem.parent().width(), 640);
+        var cheight = Math.min(canvasElem.parent().height(), 640);
+        dim = Math.min(cwidth, cheight);
+        canvasElem.width(dim);
+        canvas.width = dim;
+        canvasElem.height(dim);
+        canvas.height = dim;
+    });
+    var canvasElem = $("#main-canvas");
+    var canvas = canvasElem[0];
+    var cwidth = Math.min(canvasElem.parent().width(), 640);
+    var cheight = Math.min(canvasElem.parent().height(), 640);
+    dim = Math.min(cwidth, cheight);
+    canvasElem.width(dim);
+    canvas.width = dim;
+    canvasElem.height(dim);
+    canvas.height = dim;
     ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
-    dim = Math.min(canvas.width, canvas.height);
-    canvas.width = canvas.height = dim;
-    player = new Player(canvas.width);
+    player = new Player();
     $(document).keydown(function (e) {
-        if (e.keyCode == 32 && state == "playing")
+        if (e.keyCode == 32 && state == "playing") {
+            e.preventDefault();
             player.jump();
+        }
     });
-    bounds = fillBounds(dim);
+    bounds = fillBounds();
     walls = [];
     drawScreen(ctx);
     tick();
@@ -64,21 +84,24 @@ function tick() {
         case "countdown":
             countdownTick();
             break;
+        default:
+            drawScreen(ctx);
+            break;
     }
     requestAnimationFrame(tick);
 }
 function playTick() {
-    player.tick(dim);
+    player.tick();
     speed += gameAccel;
     bounds.forEach(function (b) {
-        b.top.x -= speed * dim;
-        b.bottom.x -= speed * dim;
+        b.top.x -= speed;
+        b.bottom.x -= speed;
     });
     walls.forEach(function (w) {
-        w.x -= speed * dim;
+        w.x -= speed;
     });
     var lastBound = bounds[bounds.length - 1];
-    while (lastBound.top.x + lastBound.top.w <= dim) {
+    while (lastBound.top.x + lastBound.top.w <= 1) {
         score++;
         if (boundDist > minBoundDist) {
             boundDist += boundDistSpeed;
@@ -96,7 +119,7 @@ function playTick() {
     drawScreen(ctx);
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
-    bgText(ctx, String(score), 0, dim, dim / 20);
+    bgText(ctx, String(score), 0, 1, 1 / 20);
 }
 function drawScreen(ctx) {
     ctx.clearRect(0, 0, dim, dim);
@@ -113,48 +136,49 @@ function countdownTick() {
         drawScreen(ctx);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        bgText(ctx, String(Math.ceil(countdownTime))[0], dim / 2, dim / 2, dim / 5);
+        bgText(ctx, String(Math.ceil(countdownTime))[0], 1 / 2, 1 / 2, 1 / 5);
     }
 }
 function bgText(ctx, text, x, y, fontSize, shadowSize) {
     if (shadowSize === void 0) { shadowSize = 1; }
+    fontSize = Math.max(fontSize * dim, minTextSize);
     ctx.font = fontSize + "pt Arial";
     ctx.fillStyle = foreground;
-    ctx.fillText(text, x, y);
+    ctx.fillText(text, x * dim, y * dim);
     ctx.lineWidth = shadowSize;
     ctx.strokeStyle = background;
-    ctx.strokeText(text, x, y);
+    ctx.strokeText(text, x * dim, y * dim);
 }
 function newRandomWall(lastBound) {
-    var minY = Math.max(margin * dim, lastBound.top.h);
-    var maxY = Math.min(dim - margin * dim - wallH * dim, lastBound.bottom.y - wallH * dim);
+    var minY = Math.max(margin, lastBound.top.h);
+    var maxY = Math.min(1 - margin - wallH, lastBound.bottom.y - wallH);
     var randY = Math.random() * (maxY - minY) + minY;
     return new Wall(lastBound.top.x, randY);
 }
 function newRandomBound(lastBound) {
-    var maxTop = Math.min(dim - boundDist * dim - margin * dim, lastBound.top.h + stepDist * dim);
-    var minTop = Math.max(margin * dim, lastBound.top.h - stepDist * dim);
+    var maxTop = Math.min(1 - boundDist - margin, lastBound.top.h + stepDist);
+    var minTop = Math.max(margin, lastBound.top.h - stepDist);
     var x = lastBound.top.x + lastBound.top.w;
-    var w = dim * boundWidth;
+    var w = boundWidth;
     var random = Math.random();
     if (random < 0.2)
-        return new Bound(x, w, lastBound.top.h, boundDist * dim, dim);
+        return new Bound(x, w, lastBound.top.h, boundDist);
     if (random < 0.6)
-        return new Bound(x, w, minTop, boundDist * dim, dim);
-    return new Bound(x, w, maxTop, boundDist * dim, dim);
+        return new Bound(x, w, minTop, boundDist);
+    return new Bound(x, w, maxTop, boundDist);
 }
 function drawAll(ctx, objects) {
     objects.forEach(function (e) { return e.draw(ctx); });
 }
-function fillBounds(dim) {
+function fillBounds() {
     var returnArray = [];
     for (var i = 0; i < 1 / boundWidth; i++) {
-        returnArray.push(new Bound(boundWidth * dim * i, boundWidth * dim, (0.5 - boundDist / 2) * dim, boundDist * dim, dim));
+        returnArray.push(new Bound(boundWidth * i, boundWidth, (0.5 - boundDist / 2), boundDist));
     }
     return returnArray;
 }
-function floorFillRect(ctx, x, y, w, h) {
-    ctx.fillRect(Math.floor(x) - 1, Math.floor(y) - 1, Math.ceil(w) + 1, Math.ceil(h) + 1);
+function floorFillRectDim(ctx, x, y, w, h) {
+    ctx.fillRect(Math.floor(x * dim) - 1, Math.floor(y * dim) - 1, Math.ceil(w * dim) + 1, Math.ceil(h * dim) + 1);
 }
 var CollideRect = /** @class */ (function () {
     function CollideRect(x, y, w, h) {
@@ -165,7 +189,7 @@ var CollideRect = /** @class */ (function () {
     }
     CollideRect.prototype.draw = function (ctx) {
         ctx.fillStyle = foreground;
-        floorFillRect(ctx, this.x, this.y, this.w, this.h);
+        floorFillRectDim(ctx, this.x, this.y, this.w, this.h);
     };
     CollideRect.prototype.collide = function (player) {
         var corners = player.corners();
@@ -177,18 +201,18 @@ var CollideRect = /** @class */ (function () {
 var Wall = /** @class */ (function (_super) {
     __extends(Wall, _super);
     function Wall(x, y) {
-        return _super.call(this, x, y, boundWidth * dim, wallH * dim) || this;
+        return _super.call(this, x, y, boundWidth, wallH) || this;
     }
     Wall.prototype.draw = function (ctx) {
         ctx.fillStyle = wallColor;
-        floorFillRect(ctx, this.x, this.y, this.w, this.h);
+        floorFillRectDim(ctx, this.x, this.y, this.w, this.h);
     };
     return Wall;
 }(CollideRect));
 var Bound = /** @class */ (function () {
-    function Bound(x, w, topH, dist, dim) {
+    function Bound(x, w, topH, dist) {
         this.top = new CollideRect(x, 0, w, topH);
-        this.bottom = new CollideRect(x, topH + dist, w, dim);
+        this.bottom = new CollideRect(x, topH + dist, w, 1);
     }
     Bound.prototype.draw = function (ctx) {
         this.top.draw(ctx);
@@ -200,19 +224,19 @@ var Bound = /** @class */ (function () {
     return Bound;
 }());
 var Player = /** @class */ (function () {
-    function Player(dim) {
+    function Player() {
         this.accel = 0;
         this.dead = false;
-        this.x = dim * 0.1;
-        this.y = dim * 0.5;
-        this.size = Math.ceil(dim * 0.02);
+        this.x = 0.1;
+        this.y = 0.5;
+        this.size = 0.02;
     }
     Player.prototype.draw = function (ctx) {
         ctx.fillStyle = playerColor;
-        floorFillRect(ctx, this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+        floorFillRectDim(ctx, this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
     };
-    Player.prototype.tick = function (dim) {
-        this.y += this.accel * dim;
+    Player.prototype.tick = function () {
+        this.y += this.accel;
         this.accel += gravity;
     };
     Player.prototype.corners = function () {

@@ -5,8 +5,9 @@ const playerColor = "#0000AA";
 const wallColor = "#AA0000";
 
 const defaultDim = 640;
-const boundWidth = 0.05;
+const minTextSize = 11;
 
+const boundWidth = 0.05;
 const gravity = 0.00011;
 const jumpAccel = -0.005;
 const boundDistSpeed = -0.00008;
@@ -35,21 +36,42 @@ $(document).ready(() => {
         }
     });
 
-    let canvas = document.getElementById("main_canvas") as HTMLCanvasElement;
+    $(window).resize(() => {
+        let canvasElem = $("#main-canvas");
+        let canvas = canvasElem[0] as HTMLCanvasElement;
+
+        let cwidth = Math.min(canvasElem.parent().width(), 640);
+        let cheight = Math.min(canvasElem.parent().height(), 640);
+        dim = Math.min(cwidth, cheight);
+
+        canvasElem.width(dim); canvas.width = dim;
+        canvasElem.height(dim); canvas.height = dim;
+    });
+
+    let canvasElem = $("#main-canvas");
+    let canvas = canvasElem[0] as HTMLCanvasElement;
+
+    let cwidth = Math.min(canvasElem.parent().width(), 640);
+    let cheight = Math.min(canvasElem.parent().height(), 640);
+    dim = Math.min(cwidth, cheight);
+
+    canvasElem.width(dim); canvas.width = dim;
+    canvasElem.height(dim); canvas.height = dim;
+
     ctx = canvas.getContext("2d");
 
     ctx.imageSmoothingEnabled = false;
 
-    dim = Math.min(canvas.width, canvas.height);
-    canvas.width = canvas.height = dim;
-
-    player = new Player(canvas.width);
+    player = new Player();
     
     $(document).keydown(e => {
-        if (e.keyCode == 32 && state == "playing") player.jump();
+        if (e.keyCode == 32 && state == "playing") {
+            e.preventDefault();
+            player.jump();
+        }
     })
 
-    bounds = fillBounds(dim);
+    bounds = fillBounds();
     walls = [];
 
     drawScreen(ctx);
@@ -66,6 +88,9 @@ function tick() {
         case "countdown":
             countdownTick();
             break;
+        default:
+            drawScreen(ctx);
+            break;
     }
 
     requestAnimationFrame(tick);
@@ -74,21 +99,21 @@ function tick() {
 
 function playTick() {
 
-    player.tick(dim);
+    player.tick();
 
     speed += gameAccel;
 
     bounds.forEach(b => {
-        b.top.x -= speed * dim;
-        b.bottom.x -= speed * dim;
+        b.top.x -= speed;
+        b.bottom.x -= speed;
     })
 
     walls.forEach(w => {
-        w.x -= speed * dim;
+        w.x -= speed;
     })
     
     let lastBound = bounds[bounds.length-1];
-    while (lastBound.top.x + lastBound.top.w <= dim) {
+    while (lastBound.top.x + lastBound.top.w <= 1) {
 
         score++;
 
@@ -112,7 +137,7 @@ function playTick() {
 
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
-    bgText(ctx, String(score), 0, dim, dim/20);
+    bgText(ctx, String(score), 0, 1, 1/20);
 
 }
 
@@ -133,54 +158,56 @@ function countdownTick() {
 
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        bgText(ctx, String(Math.ceil(countdownTime))[0], dim/2, dim/2, dim/5);
+        bgText(ctx, String(Math.ceil(countdownTime))[0], 1/2, 1/2, 1/5);
     }
 }
 
 function bgText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, fontSize: number, shadowSize: number = 1) {
+    fontSize = Math.max(fontSize * dim, minTextSize);
+
     ctx.font = fontSize+"pt Arial";
     ctx.fillStyle = foreground;
-    ctx.fillText(text, x, y);
+    ctx.fillText(text, x * dim, y * dim);
 
     ctx.lineWidth = shadowSize;
     ctx.strokeStyle = background;
-    ctx.strokeText(text, x, y);
+    ctx.strokeText(text, x * dim, y * dim);
 }
 
 function newRandomWall(lastBound: Bound): Wall {
-    let minY = Math.max(margin * dim, lastBound.top.h);
-    let maxY = Math.min(dim - margin * dim - wallH * dim, lastBound.bottom.y - wallH * dim);
+    let minY = Math.max(margin, lastBound.top.h);
+    let maxY = Math.min(1 - margin - wallH, lastBound.bottom.y - wallH);
 
     let randY = Math.random() * (maxY - minY) + minY;
     return new Wall(lastBound.top.x, randY);
 }
 
 function newRandomBound(lastBound: Bound): Bound {
-    let maxTop = Math.min(dim - boundDist * dim - margin * dim, lastBound.top.h + stepDist * dim);
-    let minTop = Math.max(margin * dim, lastBound.top.h - stepDist * dim);
+    let maxTop = Math.min(1 - boundDist - margin, lastBound.top.h + stepDist);
+    let minTop = Math.max(margin, lastBound.top.h - stepDist);
     let x = lastBound.top.x + lastBound.top.w;
-    let w = dim * boundWidth;
+    let w = boundWidth;
 
     let random = Math.random();
-    if (random < 0.2) return new Bound(x, w, lastBound.top.h, boundDist * dim, dim);
-    if (random < 0.6) return new Bound(x, w, minTop, boundDist * dim, dim);
-    return new Bound(x, w, maxTop, boundDist * dim, dim);
+    if (random < 0.2) return new Bound(x, w, lastBound.top.h, boundDist);
+    if (random < 0.6) return new Bound(x, w, minTop, boundDist);
+    return new Bound(x, w, maxTop, boundDist);
 }
 
 function drawAll(ctx: CanvasRenderingContext2D, objects: IDrawable[]) {
     objects.forEach(e => e.draw(ctx));
 }
 
-function fillBounds(dim: number): Bound[] {
+function fillBounds(): Bound[] {
     let returnArray: Bound[] = [];
     for (let i = 0; i < 1/boundWidth; i++) {
-        returnArray.push(new Bound(boundWidth * dim * i, boundWidth * dim, (0.5 - boundDist / 2) * dim, boundDist * dim, dim));
+        returnArray.push(new Bound(boundWidth * i, boundWidth, (0.5 - boundDist / 2), boundDist));
     }
     return returnArray;
 }
 
-function floorFillRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-    ctx.fillRect(Math.floor(x)-1, Math.floor(y)-1, Math.ceil(w)+1, Math.ceil(h)+1);
+function floorFillRectDim(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+    ctx.fillRect(Math.floor(x*dim)-1, Math.floor(y*dim)-1, Math.ceil(w*dim)+1, Math.ceil(h*dim)+1);
 }
 
 interface ICollideable {
@@ -196,7 +223,7 @@ class CollideRect implements ICollideable, IDrawable {
 
     draw(ctx: CanvasRenderingContext2D) {
         ctx.fillStyle = foreground;
-        floorFillRect(ctx, this.x, this.y, this.w, this.h);
+        floorFillRectDim(ctx, this.x, this.y, this.w, this.h);
     }
 
     collide(player: Player): boolean {
@@ -208,12 +235,12 @@ class CollideRect implements ICollideable, IDrawable {
 
 class Wall extends CollideRect {
     constructor(x: number, y: number) {
-        super(x, y, boundWidth * dim, wallH * dim);
+        super(x, y, boundWidth, wallH);
     }
 
     draw(ctx: CanvasRenderingContext2D) {
         ctx.fillStyle = wallColor;
-        floorFillRect(ctx, this.x, this.y, this.w, this.h);
+        floorFillRectDim(ctx, this.x, this.y, this.w, this.h);
     }
 }
 
@@ -221,9 +248,9 @@ class Bound implements ICollideable, IDrawable {
     top: CollideRect;
     bottom: CollideRect;
     
-    constructor(x: number, w: number, topH: number, dist: number, dim: number) {
+    constructor(x: number, w: number, topH: number, dist: number) {
         this.top = new CollideRect(x, 0, w, topH);
-        this.bottom = new CollideRect(x, topH + dist, w, dim);
+        this.bottom = new CollideRect(x, topH + dist, w, 1);
     }
 
     draw(ctx: CanvasRenderingContext2D) {
@@ -243,19 +270,19 @@ class Player implements IDrawable {
     accel: number = 0;
     dead: boolean = false;
 
-    constructor(dim: number) {
-        this.x = dim * 0.1;
-        this.y = dim * 0.5;
-        this.size = Math.ceil(dim * 0.02);
+    constructor() {
+        this.x = 0.1;
+        this.y = 0.5;
+        this.size = 0.02;
     }
 
     draw(ctx: CanvasRenderingContext2D) {
         ctx.fillStyle = playerColor;
-        floorFillRect(ctx, this.x-this.size/2, this.y-this.size/2, this.size, this.size);
+        floorFillRectDim(ctx, this.x-this.size/2, this.y-this.size/2, this.size, this.size);
     }
 
-    tick(dim: number) {
-        this.y += this.accel * dim;
+    tick() {
+        this.y += this.accel;
         this.accel += gravity;
     }
 
