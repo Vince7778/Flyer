@@ -9,7 +9,7 @@ const minTextSize = 11;
 
 const boundWidth = 0.05;
 const gravity = 0.00011;
-const jumpAccel = -0.005;
+const jumpAccel = -0.0035;
 const boundDistSpeed = -0.00008;
 const minBoundDist = 0.3;
 const stepDist = 0.04;
@@ -20,7 +20,7 @@ const wallH = 0.25;
 let bounds: Bound[];
 let walls: Wall[];
 let score: number = 0;
-let speed: number = 0.005;
+let speed: number = 0.008;
 let player: Player;
 let ctx: CanvasRenderingContext2D;
 let dim: number;
@@ -35,18 +35,9 @@ $(document).ready(() => {
             state = "countdown";
         }
     });
-
-    $(window).resize(() => {
-        let canvasElem = $("#main-canvas");
-        let canvas = canvasElem[0] as HTMLCanvasElement;
-
-        let cwidth = Math.min(canvasElem.parent().width(), 640);
-        let cheight = Math.min(canvasElem.parent().height(), 640);
-        dim = Math.min(cwidth, cheight);
-
-        canvasElem.width(dim); canvas.width = dim;
-        canvasElem.height(dim); canvas.height = dim;
-    });
+    $("#restart").click(() => {
+        restart();
+    })
 
     let canvasElem = $("#main-canvas");
     let canvas = canvasElem[0] as HTMLCanvasElement;
@@ -63,6 +54,8 @@ $(document).ready(() => {
     ctx.imageSmoothingEnabled = false;
 
     player = new Player();
+    bounds = fillBounds();
+    walls = [];
     
     $(document).keydown(e => {
         if (e.keyCode == 32 && state == "playing") {
@@ -71,13 +64,40 @@ $(document).ready(() => {
         }
     })
 
-    bounds = fillBounds();
-    walls = [];
-
     drawScreen(ctx);
 
     tick();
 });
+
+$(document).click(e => {
+    let target = $(e.target);
+    if (!target.is("button")) {
+        player.jump();
+    }
+});
+
+$(window).resize(() => {
+    let canvasElem = $("#main-canvas");
+    let canvas = canvasElem[0] as HTMLCanvasElement;
+
+    let cwidth = Math.min(canvasElem.parent().width(), 640);
+    let cheight = Math.min(canvasElem.parent().height(), 640);
+    dim = Math.min(cwidth, cheight);
+
+    canvasElem.width(dim); canvas.width = dim;
+    canvasElem.height(dim); canvas.height = dim;
+});
+
+function restart() {
+    player = new Player();
+    bounds = fillBounds();
+    walls = [];
+    boundDist = 0.6;
+    state = "paused";
+    countdownTime = 3;
+    score = 0;
+    speed = 0.008;
+}
 
 function tick() {
 
@@ -87,6 +107,9 @@ function tick() {
             break;
         case "countdown":
             countdownTick();
+            break;
+        case "ended":
+            endedTick();
             break;
         default:
             drawScreen(ctx);
@@ -130,6 +153,25 @@ function playTick() {
 
     }
 
+    if (player.y <= 0 || player.y + player.size/2 >= 1) {
+        state = "ended";
+        return;
+    }
+
+    bounds.forEach(b => {
+        if (b.collide(player)) {
+            state = "ended";
+            return;
+        }
+    });
+
+    walls.forEach(b => {
+        if (b.collide(player)) {
+            state = "ended";
+            return;
+        }
+    });
+
     while (bounds[0].top.x + bounds[0].top.w < 0) bounds.shift();
     while (walls.length > 0 && walls[0].x + walls[0].w < 0) walls.shift();
 
@@ -160,6 +202,14 @@ function countdownTick() {
         ctx.textBaseline = "middle";
         bgText(ctx, String(Math.ceil(countdownTime))[0], 1/2, 1/2, 1/5);
     }
+}
+
+function endedTick() {
+    drawScreen(ctx);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    bgText(ctx, "Score: "+String(score), 1/2, 1/2, 1/10);
 }
 
 function bgText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, fontSize: number, shadowSize: number = 1) {

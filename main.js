@@ -19,7 +19,7 @@ var defaultDim = 640;
 var minTextSize = 11;
 var boundWidth = 0.05;
 var gravity = 0.00011;
-var jumpAccel = -0.005;
+var jumpAccel = -0.0035;
 var boundDistSpeed = -0.00008;
 var minBoundDist = 0.3;
 var stepDist = 0.04;
@@ -29,7 +29,7 @@ var wallH = 0.25;
 var bounds;
 var walls;
 var score = 0;
-var speed = 0.005;
+var speed = 0.008;
 var player;
 var ctx;
 var dim;
@@ -42,16 +42,8 @@ $(document).ready(function () {
             state = "countdown";
         }
     });
-    $(window).resize(function () {
-        var canvasElem = $("#main-canvas");
-        var canvas = canvasElem[0];
-        var cwidth = Math.min(canvasElem.parent().width(), 640);
-        var cheight = Math.min(canvasElem.parent().height(), 640);
-        dim = Math.min(cwidth, cheight);
-        canvasElem.width(dim);
-        canvas.width = dim;
-        canvasElem.height(dim);
-        canvas.height = dim;
+    $("#restart").click(function () {
+        restart();
     });
     var canvasElem = $("#main-canvas");
     var canvas = canvasElem[0];
@@ -65,17 +57,44 @@ $(document).ready(function () {
     ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     player = new Player();
+    bounds = fillBounds();
+    walls = [];
     $(document).keydown(function (e) {
         if (e.keyCode == 32 && state == "playing") {
             e.preventDefault();
             player.jump();
         }
     });
-    bounds = fillBounds();
-    walls = [];
     drawScreen(ctx);
     tick();
 });
+$(document).click(function (e) {
+    var target = $(e.target);
+    if (!target.is("button")) {
+        player.jump();
+    }
+});
+$(window).resize(function () {
+    var canvasElem = $("#main-canvas");
+    var canvas = canvasElem[0];
+    var cwidth = Math.min(canvasElem.parent().width(), 640);
+    var cheight = Math.min(canvasElem.parent().height(), 640);
+    dim = Math.min(cwidth, cheight);
+    canvasElem.width(dim);
+    canvas.width = dim;
+    canvasElem.height(dim);
+    canvas.height = dim;
+});
+function restart() {
+    player = new Player();
+    bounds = fillBounds();
+    walls = [];
+    boundDist = 0.6;
+    state = "paused";
+    countdownTime = 3;
+    score = 0;
+    speed = 0.008;
+}
 function tick() {
     switch (state) {
         case "playing":
@@ -83,6 +102,9 @@ function tick() {
             break;
         case "countdown":
             countdownTick();
+            break;
+        case "ended":
+            endedTick();
             break;
         default:
             drawScreen(ctx);
@@ -112,6 +134,22 @@ function playTick() {
             walls.push(newRandomWall(lastBound));
         }
     }
+    if (player.y <= 0 || player.y + player.size / 2 >= 1) {
+        state = "ended";
+        return;
+    }
+    bounds.forEach(function (b) {
+        if (b.collide(player)) {
+            state = "ended";
+            return;
+        }
+    });
+    walls.forEach(function (b) {
+        if (b.collide(player)) {
+            state = "ended";
+            return;
+        }
+    });
     while (bounds[0].top.x + bounds[0].top.w < 0)
         bounds.shift();
     while (walls.length > 0 && walls[0].x + walls[0].w < 0)
@@ -138,6 +176,12 @@ function countdownTick() {
         ctx.textBaseline = "middle";
         bgText(ctx, String(Math.ceil(countdownTime))[0], 1 / 2, 1 / 2, 1 / 5);
     }
+}
+function endedTick() {
+    drawScreen(ctx);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    bgText(ctx, "Score: " + String(score), 1 / 2, 1 / 2, 1 / 10);
 }
 function bgText(ctx, text, x, y, fontSize, shadowSize) {
     if (shadowSize === void 0) { shadowSize = 1; }
