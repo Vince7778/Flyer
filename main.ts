@@ -1,24 +1,30 @@
 
 const foreground = "#000000";
 const background = "#FFFFFF";
-const playerColor = "#3333FF";
+const playerColor = "#0000AA";
+const wallColor = "#AA0000";
 
 const defaultDim = 640;
 const boundWidth = 0.05;
 
 const gravity = 0.00011;
-const jumpAccel = -0.004;
-const boundDistSpeed = -0.00002;
+const jumpAccel = -0.005;
+const boundDistSpeed = -0.00008;
 const minBoundDist = 0.3;
 const stepDist = 0.04;
 const margin = 0.02;
+const gameAccel = 0.0000008;
+const wallH = 0.25;
 
 let bounds: Bound[];
+let walls: Wall[];
+let score: number = 0;
 let speed: number = 0.005;
 let player: Player;
 let ctx: CanvasRenderingContext2D;
 let dim: number;
 let boundDist: number = 0.6;
+let state: string = "paused";
 
 $(document).ready(() => {
 
@@ -35,38 +41,71 @@ $(document).ready(() => {
         if (e.keyCode == 32) player.jump();
     })
 
-    player.draw(ctx);
-
     bounds = fillBounds(dim);
-    drawAll(bounds, ctx);
+    walls = [];
 
+    state = "playing";
     tick();
 });
 
 function tick() {
 
+    if (state == "playing") {
+        playTick();
+    }
+
+}
+
+function playTick() {
+
     player.tick(dim);
 
-    if (boundDist > minBoundDist) {
-        boundDist += boundDistSpeed;
-    }
+    speed += gameAccel;
 
     bounds.forEach(b => {
         b.top.x -= speed * dim;
         b.bottom.x -= speed * dim;
     })
+
+    walls.forEach(w => {
+        w.x -= speed * dim;
+    })
     
     let lastBound = bounds[bounds.length-1];
-    if (lastBound.top.x + lastBound.top.w <= dim) {
+    while (lastBound.top.x + lastBound.top.w <= dim) {
+
+        score++;
+
+        if (boundDist > minBoundDist) {
+            boundDist += boundDistSpeed;
+        }
+
         bounds.push(newRandomBound(lastBound));
+        lastBound = bounds[bounds.length-1];
+
+        if (score % 20 == 0) {
+            walls.push(newRandomWall(lastBound));
+        }
+
     }
+
+    while (bounds[0].top.x + bounds[0].top.w < 0) bounds.shift();
 
     ctx.clearRect(0, 0, dim, dim);
 
+    drawAll(ctx, bounds);
+    drawAll(ctx, walls);
     player.draw(ctx);
-    drawAll(bounds, ctx);
     requestAnimationFrame(tick);
 
+}
+
+function newRandomWall(lastBound: Bound): Wall {
+    let minY = Math.max(margin * dim, lastBound.top.h);
+    let maxY = Math.min(dim - margin * dim - wallH * dim, lastBound.bottom.y - wallH * dim);
+
+    let randY = Math.random() * (maxY - minY) + minY;
+    return new Wall(lastBound.top.x, randY);
 }
 
 function newRandomBound(lastBound: Bound): Bound {
@@ -81,7 +120,7 @@ function newRandomBound(lastBound: Bound): Bound {
     return new Bound(x, w, maxTop, boundDist * dim, dim);
 }
 
-function drawAll(objects: IDrawable[], ctx: CanvasRenderingContext2D) {
+function drawAll(ctx: CanvasRenderingContext2D, objects: IDrawable[]) {
     objects.forEach(e => e.draw(ctx));
 }
 
@@ -117,6 +156,17 @@ class CollideRect implements ICollideable, IDrawable {
         let corners = player.corners();
         return corners[0] < this.x + this.w && corners[2] > this.x &&
             corners[1] < this.y + this.h && corners[3] > this.y;
+    }
+}
+
+class Wall extends CollideRect {
+    constructor(x: number, y: number) {
+        super(x, y, boundWidth * dim, wallH * dim);
+    }
+
+    draw(ctx: CanvasRenderingContext2D) {
+        ctx.fillStyle = wallColor;
+        floorFillRect(ctx, this.x, this.y, this.w, this.h);
     }
 }
 

@@ -1,20 +1,39 @@
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var foreground = "#000000";
 var background = "#FFFFFF";
-var playerColor = "#3333FF";
+var playerColor = "#0000AA";
+var wallColor = "#AA0000";
 var defaultDim = 640;
 var boundWidth = 0.05;
 var gravity = 0.00011;
-var jumpAccel = -0.004;
-var boundDistSpeed = -0.00002;
+var jumpAccel = -0.005;
+var boundDistSpeed = -0.00008;
 var minBoundDist = 0.3;
 var stepDist = 0.04;
 var margin = 0.02;
+var gameAccel = 0.0000008;
+var wallH = 0.25;
 var bounds;
+var walls;
+var score = 0;
 var speed = 0.005;
 var player;
 var ctx;
 var dim;
 var boundDist = 0.6;
+var state = "paused";
 $(document).ready(function () {
     var canvas = document.getElementById("main_canvas");
     ctx = canvas.getContext("2d");
@@ -26,42 +45,65 @@ $(document).ready(function () {
         if (e.keyCode == 32)
             player.jump();
     });
-    player.draw(ctx);
     bounds = fillBounds(dim);
-    drawAll(bounds, ctx);
+    walls = [];
+    state = "playing";
     tick();
 });
 function tick() {
-    player.tick(dim);
-    if (boundDist > minBoundDist) {
-        boundDist += boundDistSpeed;
+    if (state == "playing") {
+        playTick();
     }
+}
+function playTick() {
+    player.tick(dim);
+    speed += gameAccel;
     bounds.forEach(function (b) {
         b.top.x -= speed * dim;
         b.bottom.x -= speed * dim;
     });
+    walls.forEach(function (w) {
+        w.x -= speed * dim;
+    });
     var lastBound = bounds[bounds.length - 1];
-    if (lastBound.top.x + lastBound.top.w <= dim) {
+    while (lastBound.top.x + lastBound.top.w <= dim) {
+        score++;
+        if (boundDist > minBoundDist) {
+            boundDist += boundDistSpeed;
+        }
         bounds.push(newRandomBound(lastBound));
+        lastBound = bounds[bounds.length - 1];
+        if (score % 20 == 0) {
+            walls.push(newRandomWall(lastBound));
+        }
     }
+    while (bounds[0].top.x + bounds[0].top.w < 0)
+        bounds.shift();
     ctx.clearRect(0, 0, dim, dim);
+    drawAll(ctx, bounds);
+    drawAll(ctx, walls);
     player.draw(ctx);
-    drawAll(bounds, ctx);
     requestAnimationFrame(tick);
+}
+function newRandomWall(lastBound) {
+    var minY = Math.max(margin * dim, lastBound.top.h);
+    var maxY = Math.min(dim - margin * dim - wallH * dim, lastBound.bottom.y - wallH * dim);
+    var randY = Math.random() * (maxY - minY) + minY;
+    return new Wall(lastBound.top.x, randY);
 }
 function newRandomBound(lastBound) {
     var maxTop = Math.min(dim - boundDist * dim - margin * dim, lastBound.top.h + stepDist * dim);
     var minTop = Math.max(margin * dim, lastBound.top.h - stepDist * dim);
-    var random = Math.floor(Math.random() * 3);
     var x = lastBound.top.x + lastBound.top.w;
     var w = dim * boundWidth;
-    if (random == 0)
+    var random = Math.random();
+    if (random < 0.2)
         return new Bound(x, w, lastBound.top.h, boundDist * dim, dim);
-    if (random == 1)
+    if (random < 0.6)
         return new Bound(x, w, minTop, boundDist * dim, dim);
     return new Bound(x, w, maxTop, boundDist * dim, dim);
 }
-function drawAll(objects, ctx) {
+function drawAll(ctx, objects) {
     objects.forEach(function (e) { return e.draw(ctx); });
 }
 function fillBounds(dim) {
@@ -92,6 +134,17 @@ var CollideRect = /** @class */ (function () {
     };
     return CollideRect;
 }());
+var Wall = /** @class */ (function (_super) {
+    __extends(Wall, _super);
+    function Wall(x, y) {
+        return _super.call(this, x, y, boundWidth * dim, wallH * dim) || this;
+    }
+    Wall.prototype.draw = function (ctx) {
+        ctx.fillStyle = wallColor;
+        floorFillRect(ctx, this.x, this.y, this.w, this.h);
+    };
+    return Wall;
+}(CollideRect));
 var Bound = /** @class */ (function () {
     function Bound(x, w, topH, dist, dim) {
         this.top = new CollideRect(x, 0, w, topH);
