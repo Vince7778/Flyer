@@ -25,11 +25,19 @@ let ctx: CanvasRenderingContext2D;
 let dim: number;
 let boundDist: number = 0.6;
 let state: string = "paused";
+let countdownTime: number = 3;
 
 $(document).ready(() => {
 
+    $("#start").click(() => {
+        if (state == "paused") {
+            state = "countdown";
+        }
+    });
+
     let canvas = document.getElementById("main_canvas") as HTMLCanvasElement;
     ctx = canvas.getContext("2d");
+
     ctx.imageSmoothingEnabled = false;
 
     dim = Math.min(canvas.width, canvas.height);
@@ -38,21 +46,29 @@ $(document).ready(() => {
     player = new Player(canvas.width);
     
     $(document).keydown(e => {
-        if (e.keyCode == 32) player.jump();
+        if (e.keyCode == 32 && state == "playing") player.jump();
     })
 
     bounds = fillBounds(dim);
     walls = [];
 
-    state = "playing";
+    drawScreen(ctx);
+
     tick();
 });
 
 function tick() {
 
-    if (state == "playing") {
-        playTick();
+    switch(state) {
+        case "playing":
+            playTick();
+            break;
+        case "countdown":
+            countdownTick();
+            break;
     }
+
+    requestAnimationFrame(tick);
 
 }
 
@@ -83,21 +99,52 @@ function playTick() {
         bounds.push(newRandomBound(lastBound));
         lastBound = bounds[bounds.length-1];
 
-        if (score % 20 == 0) {
+        if (score % 30 == 0) {
             walls.push(newRandomWall(lastBound));
         }
 
     }
 
     while (bounds[0].top.x + bounds[0].top.w < 0) bounds.shift();
+    while (walls.length > 0 && walls[0].x + walls[0].w < 0) walls.shift();
 
+    drawScreen(ctx);
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    bgText(ctx, String(score), 0, dim, dim/20);
+
+}
+
+function drawScreen(ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, dim, dim);
-
     drawAll(ctx, bounds);
     drawAll(ctx, walls);
     player.draw(ctx);
-    requestAnimationFrame(tick);
+}
 
+function countdownTick() {
+    if (countdownTime <= 1/60) {
+        state = "playing";
+    } else {
+        countdownTime -= 1/60;
+        
+        drawScreen(ctx);
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        bgText(ctx, String(Math.ceil(countdownTime))[0], dim/2, dim/2, dim/5);
+    }
+}
+
+function bgText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, fontSize: number, shadowSize: number = 1) {
+    ctx.font = fontSize+"pt Arial";
+    ctx.fillStyle = foreground;
+    ctx.fillText(text, x, y);
+
+    ctx.lineWidth = shadowSize;
+    ctx.strokeStyle = background;
+    ctx.strokeText(text, x, y);
 }
 
 function newRandomWall(lastBound: Bound): Wall {

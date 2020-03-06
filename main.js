@@ -34,7 +34,13 @@ var ctx;
 var dim;
 var boundDist = 0.6;
 var state = "paused";
+var countdownTime = 3;
 $(document).ready(function () {
+    $("#start").click(function () {
+        if (state == "paused") {
+            state = "countdown";
+        }
+    });
     var canvas = document.getElementById("main_canvas");
     ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
@@ -42,18 +48,24 @@ $(document).ready(function () {
     canvas.width = canvas.height = dim;
     player = new Player(canvas.width);
     $(document).keydown(function (e) {
-        if (e.keyCode == 32)
+        if (e.keyCode == 32 && state == "playing")
             player.jump();
     });
     bounds = fillBounds(dim);
     walls = [];
-    state = "playing";
+    drawScreen(ctx);
     tick();
 });
 function tick() {
-    if (state == "playing") {
-        playTick();
+    switch (state) {
+        case "playing":
+            playTick();
+            break;
+        case "countdown":
+            countdownTick();
+            break;
     }
+    requestAnimationFrame(tick);
 }
 function playTick() {
     player.tick(dim);
@@ -73,17 +85,45 @@ function playTick() {
         }
         bounds.push(newRandomBound(lastBound));
         lastBound = bounds[bounds.length - 1];
-        if (score % 20 == 0) {
+        if (score % 30 == 0) {
             walls.push(newRandomWall(lastBound));
         }
     }
     while (bounds[0].top.x + bounds[0].top.w < 0)
         bounds.shift();
+    while (walls.length > 0 && walls[0].x + walls[0].w < 0)
+        walls.shift();
+    drawScreen(ctx);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    bgText(ctx, String(score), 0, dim, dim / 20);
+}
+function drawScreen(ctx) {
     ctx.clearRect(0, 0, dim, dim);
     drawAll(ctx, bounds);
     drawAll(ctx, walls);
     player.draw(ctx);
-    requestAnimationFrame(tick);
+}
+function countdownTick() {
+    if (countdownTime <= 1 / 60) {
+        state = "playing";
+    }
+    else {
+        countdownTime -= 1 / 60;
+        drawScreen(ctx);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        bgText(ctx, String(Math.ceil(countdownTime))[0], dim / 2, dim / 2, dim / 5);
+    }
+}
+function bgText(ctx, text, x, y, fontSize, shadowSize) {
+    if (shadowSize === void 0) { shadowSize = 1; }
+    ctx.font = fontSize + "pt Arial";
+    ctx.fillStyle = foreground;
+    ctx.fillText(text, x, y);
+    ctx.lineWidth = shadowSize;
+    ctx.strokeStyle = background;
+    ctx.strokeText(text, x, y);
 }
 function newRandomWall(lastBound) {
     var minY = Math.max(margin * dim, lastBound.top.h);
