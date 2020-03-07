@@ -20,8 +20,8 @@ var minTextSize = 11;
 var boundWidth = 0.05;
 var gravity = 0.00011;
 var jumpAccel = -0.004;
-var boundDistSpeed = -0.00008;
-var minBoundDist = 0.3;
+var boundDistSpeed = -0.00016;
+var minBoundDist = 0.45;
 var stepDist = 0.04;
 var margin = 0.02;
 var gameAccel = 0.0000016;
@@ -33,12 +33,16 @@ var speed = 0.008;
 var player;
 var ctx;
 var dim;
-var boundDist = 0.6;
+var boundDist = 0.7;
 var state = "paused";
 var countdownTime = 3;
 $(document).ready(function () {
-    $("#restart").click(function () {
+    $("#restart").click(function (e) {
+        e.preventDefault();
         restart();
+    });
+    $("#restart").mousedown(function (e) {
+        e.preventDefault();
     });
     var canvasElem = $("#main-canvas");
     var canvas = canvasElem[0];
@@ -55,9 +59,14 @@ $(document).ready(function () {
     bounds = fillBounds();
     walls = [];
     $(document).keydown(function (e) {
-        if (e.keyCode == 32 && state == "playing") {
+        if (e.keyCode == 32) {
             e.preventDefault();
-            player.jump();
+            if (state == "playing") {
+                player.jump();
+            }
+            else if (state == "paused") {
+                state = "countdown";
+            }
         }
     });
     drawScreen(ctx);
@@ -88,9 +97,9 @@ $(window).resize(function () {
 });
 function restart() {
     player = new Player();
+    boundDist = 0.6;
     bounds = fillBounds();
     walls = [];
-    boundDist = 0.6;
     state = "paused";
     countdownTime = 3;
     score = 0;
@@ -164,7 +173,8 @@ function playTick() {
     bgText(ctx, String(score), 0, 1, 1 / 20);
 }
 function drawScreen(ctx) {
-    ctx.clearRect(0, 0, dim, dim);
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, dim, dim);
     drawAll(ctx, bounds);
     drawAll(ctx, walls);
     player.draw(ctx);

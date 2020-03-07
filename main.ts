@@ -10,8 +10,8 @@ const minTextSize = 11;
 const boundWidth = 0.05;
 const gravity = 0.00011;
 const jumpAccel = -0.004;
-const boundDistSpeed = -0.00008;
-const minBoundDist = 0.3;
+const boundDistSpeed = -0.00016;
+const minBoundDist = 0.45;
 const stepDist = 0.04;
 const margin = 0.02;
 const gameAccel = 0.0000016;
@@ -24,15 +24,19 @@ let speed: number = 0.008;
 let player: Player;
 let ctx: CanvasRenderingContext2D;
 let dim: number;
-let boundDist: number = 0.6;
+let boundDist: number = 0.7;
 let state: string = "paused";
 let countdownTime: number = 3;
 
 $(document).ready(() => {
     
-    $("#restart").click(() => {
+    $("#restart").click(e => {
+        e.preventDefault();
         restart();
-    })
+    });
+    $("#restart").mousedown(e => {
+        e.preventDefault();
+    });
 
     let canvasElem = $("#main-canvas");
     let canvas = canvasElem[0] as HTMLCanvasElement;
@@ -53,9 +57,13 @@ $(document).ready(() => {
     walls = [];
     
     $(document).keydown(e => {
-        if (e.keyCode == 32 && state == "playing") {
+        if (e.keyCode == 32) {
             e.preventDefault();
-            player.jump();
+            if (state == "playing") {
+                player.jump();
+            } else if (state == "paused") {
+                state = "countdown";
+            }
         }
     })
 
@@ -90,9 +98,9 @@ $(window).resize(() => {
 
 function restart() {
     player = new Player();
+    boundDist = 0.6;
     bounds = fillBounds();
     walls = [];
-    boundDist = 0.6;
     state = "paused";
     countdownTime = 3;
     score = 0;
@@ -187,7 +195,8 @@ function playTick() {
 }
 
 function drawScreen(ctx: CanvasRenderingContext2D) {
-    ctx.clearRect(0, 0, dim, dim);
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, dim, dim);
     drawAll(ctx, bounds);
     drawAll(ctx, walls);
     player.draw(ctx);
