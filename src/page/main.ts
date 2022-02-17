@@ -8,7 +8,7 @@ const defaultDim = 640;
 const minTextSize = 11;
 
 const boundWidth = 0.05;
-const gravity = 0.001;
+const gravity = 0.2;
 const jumpAccel = -0.24;
 const boundDistSpeed = -0.01;
 const minBoundDist = 0.45;
