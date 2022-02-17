@@ -18,9 +18,9 @@ class Player implements IDrawable {
         floorFillRectDim(ctx, this.x-this.size/2, this.y-this.size/2, this.size, this.size);
     }
 
-    tick() {
-        this.y += this.accel;
-        this.accel += gravity;
+    tick(dt: number) {
+        this.y += this.accel*dt;
+        this.accel += gravity*dt;
     }
 
     corners(): number[] {

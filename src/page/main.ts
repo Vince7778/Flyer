@@ -8,13 +8,13 @@ const defaultDim = 640;
 const minTextSize = 11;
 
 const boundWidth = 0.05;
-const gravity = 0.00011;
-const jumpAccel = -0.004;
-const boundDistSpeed = -0.00016;
+const gravity = 0.001;
+const jumpAccel = -0.24;
+const boundDistSpeed = -0.01;
 const minBoundDist = 0.45;
 const stepDist = 0.04;
 const margin = 0.02;
-const gameAccel = 0.0000016;
+const gameAccel = 0.0001;
 const wallH = 0.25;
 
 const el = (n: string) => document.getElementById(n);
@@ -22,7 +22,7 @@ const el = (n: string) => document.getElementById(n);
 let bounds: Bound[];
 let walls: Wall[];
 let score: number = 0;
-let speed: number = 0.008;
+let speed: number = 0.5;
 let player: Player;
 let ctx: CanvasRenderingContext2D;
 let dim: number;
@@ -103,17 +103,23 @@ function restart() {
     state = "paused";
     countdownTime = 3;
     score = 0;
-    speed = 0.008;
+    speed = 0.5;
 }
+
+let lastTick = new Date();
 
 function tick() {
 
+    const curTick = new Date();
+    const dt = (curTick.getTime() - lastTick.getTime()) / 1000;
+    lastTick = curTick;
+
     switch(state) {
         case "playing":
-            playTick();
+            playTick(dt);
             break;
         case "countdown":
-            countdownTick();
+            countdownTick(dt);
             break;
         case "ended":
             endedTick();
@@ -130,19 +136,19 @@ function tick() {
 
 }
 
-function playTick() {
+function playTick(dt: number) {
 
-    player.tick();
+    player.tick(dt);
 
-    speed += gameAccel;
+    speed += gameAccel*dt;
 
     bounds.forEach(b => {
-        b.top.x -= speed;
-        b.bottom.x -= speed;
+        b.top.x -= speed*dt;
+        b.bottom.x -= speed*dt;
     })
 
     walls.forEach(w => {
-        w.x -= speed;
+        w.x -= speed*dt;
     })
     
     let lastBound = bounds[bounds.length-1];
@@ -151,7 +157,7 @@ function playTick() {
         score++;
 
         if (boundDist > minBoundDist) {
-            boundDist += boundDistSpeed;
+            boundDist += boundDistSpeed*dt;
         }
 
         bounds.push(newRandomBound(lastBound));
@@ -200,11 +206,11 @@ function drawScreen(ctx: CanvasRenderingContext2D) {
     player.draw(ctx);
 }
 
-function countdownTick() {
-    if (countdownTime <= 1/60) {
+function countdownTick(dt: number) {
+    if (countdownTime <= dt) {
         state = "playing";
     } else {
-        countdownTime -= 1/60;
+        countdownTime -= dt;
         
         drawScreen(ctx);
 
