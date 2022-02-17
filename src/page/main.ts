@@ -17,6 +17,8 @@ const margin = 0.02;
 const gameAccel = 0.0000016;
 const wallH = 0.25;
 
+const el = (n: string) => document.getElementById(n);
+
 let bounds: Bound[];
 let walls: Wall[];
 let score: number = 0;
@@ -28,25 +30,32 @@ let boundDist: number = 0.7;
 let state: string = "paused";
 let countdownTime: number = 3;
 
-$(document).ready(() => {
+function resize() {
+    let canvasElem = el("main-canvas");
+    let canvas = canvasElem as HTMLCanvasElement;
+
+    let cwidth = Math.min(canvasElem.parentElement.offsetWidth, 640);
+    let cheight = Math.min(canvasElem.parentElement.offsetHeight, 640);
+    dim = Math.min(cwidth, cheight);
+
+    canvas.width = dim;
+    canvas.height = dim;
+}
+
+document.addEventListener("readystatechange", () => {
     
-    $("#restart").click(e => {
+    el("restart").addEventListener("click", e => {
         e.preventDefault();
         restart();
     });
-    $("#restart").mousedown(e => {
+    el("restart").addEventListener("mousedown", e => {
         e.preventDefault();
     });
 
-    let canvasElem = $("#main-canvas");
-    let canvas = canvasElem[0] as HTMLCanvasElement;
+    let canvasElem = el("main-canvas");
+    let canvas = canvasElem as HTMLCanvasElement;
 
-    let cwidth = Math.min(canvasElem.parent().width(), 640);
-    let cheight = Math.min(canvasElem.parent().height(), 640);
-    dim = Math.min(cwidth, cheight);
-
-    canvasElem.width(dim); canvas.width = dim;
-    canvasElem.height(dim); canvas.height = dim;
+    resize();
 
     ctx = canvas.getContext("2d");
 
@@ -56,8 +65,8 @@ $(document).ready(() => {
     bounds = fillBounds();
     walls = [];
     
-    $(document).keydown(e => {
-        if (e.keyCode == 32) {
+    document.addEventListener("keydown", e => {
+        if (e.key === "Space") {
             e.preventDefault();
             if (state == "playing") {
                 player.jump();
@@ -72,9 +81,9 @@ $(document).ready(() => {
     tick();
 });
 
-$(document).mousedown(e => {
-    let target = $(e.target);
-    if (!target.is("button") && !target.is("a")) {
+document.addEventListener("mousedown", e => {
+    let target = <HTMLElement>e.target;
+    if (target.nodeName !== "BUTTON" && target.nodeName !== "A") {
         e.preventDefault();
         if (state == "playing") {
             player.jump();
@@ -84,21 +93,11 @@ $(document).mousedown(e => {
     }
 });
 
-$(window).resize(() => {
-    let canvasElem = $("#main-canvas");
-    let canvas = canvasElem[0] as HTMLCanvasElement;
-
-    let cwidth = Math.min(canvasElem.parent().width(), 640);
-    let cheight = Math.min(canvasElem.parent().height(), 640);
-    dim = Math.min(cwidth, cheight);
-
-    canvasElem.width(dim); canvas.width = dim;
-    canvasElem.height(dim); canvas.height = dim;
-});
+window.addEventListener("resize", resize);
 
 function restart() {
     player = new Player();
-    boundDist = 0.6;
+    boundDist = 0.7;
     bounds = fillBounds();
     walls = [];
     state = "paused";

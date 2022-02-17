@@ -28,6 +28,7 @@ var stepDist = 0.04;
 var margin = 0.02;
 var gameAccel = 0.0000016;
 var wallH = 0.25;
+var el = function (n) { return document.getElementById(n); };
 var bounds;
 var walls;
 var score = 0;
@@ -38,30 +39,33 @@ var dim;
 var boundDist = 0.7;
 var state = "paused";
 var countdownTime = 3;
-$(document).ready(function () {
-    $("#restart").click(function (e) {
+function resize() {
+    var canvasElem = el("main-canvas");
+    var canvas = canvasElem;
+    var cwidth = Math.min(canvasElem.parentElement.offsetWidth, 640);
+    var cheight = Math.min(canvasElem.parentElement.offsetHeight, 640);
+    dim = Math.min(cwidth, cheight);
+    canvas.width = dim;
+    canvas.height = dim;
+}
+document.addEventListener("readystatechange", function () {
+    el("restart").addEventListener("click", function (e) {
         e.preventDefault();
         restart();
     });
-    $("#restart").mousedown(function (e) {
+    el("restart").addEventListener("mousedown", function (e) {
         e.preventDefault();
     });
-    var canvasElem = $("#main-canvas");
-    var canvas = canvasElem[0];
-    var cwidth = Math.min(canvasElem.parent().width(), 640);
-    var cheight = Math.min(canvasElem.parent().height(), 640);
-    dim = Math.min(cwidth, cheight);
-    canvasElem.width(dim);
-    canvas.width = dim;
-    canvasElem.height(dim);
-    canvas.height = dim;
+    var canvasElem = el("main-canvas");
+    var canvas = canvasElem;
+    resize();
     ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     player = new Player();
     bounds = fillBounds();
     walls = [];
-    $(document).keydown(function (e) {
-        if (e.keyCode == 32) {
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Space") {
             e.preventDefault();
             if (state == "playing") {
                 player.jump();
@@ -74,9 +78,9 @@ $(document).ready(function () {
     drawScreen(ctx);
     tick();
 });
-$(document).mousedown(function (e) {
-    var target = $(e.target);
-    if (!target.is("button") && !target.is("a")) {
+document.addEventListener("mousedown", function (e) {
+    var target = e.target;
+    if (target.nodeName !== "BUTTON" && target.nodeName !== "A") {
         e.preventDefault();
         if (state == "playing") {
             player.jump();
@@ -86,20 +90,10 @@ $(document).mousedown(function (e) {
         }
     }
 });
-$(window).resize(function () {
-    var canvasElem = $("#main-canvas");
-    var canvas = canvasElem[0];
-    var cwidth = Math.min(canvasElem.parent().width(), 640);
-    var cheight = Math.min(canvasElem.parent().height(), 640);
-    dim = Math.min(cwidth, cheight);
-    canvasElem.width(dim);
-    canvas.width = dim;
-    canvasElem.height(dim);
-    canvas.height = dim;
-});
+window.addEventListener("resize", resize);
 function restart() {
     player = new Player();
-    boundDist = 0.6;
+    boundDist = 0.7;
     bounds = fillBounds();
     walls = [];
     state = "paused";
