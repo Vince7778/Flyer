@@ -196,8 +196,7 @@ function playTick() {
 function drawScreen(ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, dim, dim);
-    drawAll(ctx, bounds);
-    drawAll(ctx, walls);
+    drawAll(ctx, ...bounds, ...walls);
     player.draw(ctx);
 }
 
@@ -243,123 +242,10 @@ function bgText(ctx: CanvasRenderingContext2D, text: string, x: number, y: numbe
     ctx.strokeText(text, x * dim, y * dim);
 }
 
-function newRandomWall(lastBound: Bound): Wall {
-    let minY = Math.max(margin, lastBound.top.h);
-    let maxY = Math.min(1 - margin - wallH, lastBound.bottom.y - wallH);
-
-    let randY = Math.random() * (maxY - minY) + minY;
-    return new Wall(lastBound.top.x, randY);
-}
-
-function newRandomBound(lastBound: Bound): Bound {
-    let maxTop = Math.min(1 - boundDist - margin, lastBound.top.h + stepDist);
-    let minTop = Math.max(margin, lastBound.top.h - stepDist);
-    let x = lastBound.top.x + lastBound.top.w;
-    let w = boundWidth;
-
-    let random = Math.random();
-    if (random < 0.2) return new Bound(x, w, lastBound.top.h, boundDist);
-    if (random < 0.6) return new Bound(x, w, minTop, boundDist);
-    return new Bound(x, w, maxTop, boundDist);
-}
-
-function drawAll(ctx: CanvasRenderingContext2D, objects: IDrawable[]) {
+function drawAll(ctx: CanvasRenderingContext2D, ...objects: IDrawable[]) {
     objects.forEach(e => e.draw(ctx));
-}
-
-function fillBounds(): Bound[] {
-    let returnArray: Bound[] = [];
-    for (let i = 0; i < 1/boundWidth; i++) {
-        returnArray.push(new Bound(boundWidth * i, boundWidth, (0.5 - boundDist / 2), boundDist));
-    }
-    return returnArray;
 }
 
 function floorFillRectDim(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
     ctx.fillRect(Math.floor(x*dim)-1, Math.floor(y*dim)-1, Math.ceil(w*dim)+1, Math.ceil(h*dim)+1);
-}
-
-interface ICollideable {
-    collide(player: Player): boolean;
-}
-
-interface IDrawable {
-    draw(ctx: CanvasRenderingContext2D): void;
-}
-
-class CollideRect implements ICollideable, IDrawable {
-    constructor(public x: number, public y: number, public w: number, public h: number) {}
-
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = foreground;
-        floorFillRectDim(ctx, this.x, this.y, this.w, this.h);
-    }
-
-    collide(player: Player): boolean {
-        let corners = player.corners();
-        return corners[0] < this.x + this.w && corners[2] > this.x &&
-            corners[1] < this.y + this.h && corners[3] > this.y;
-    }
-}
-
-class Wall extends CollideRect {
-    constructor(x: number, y: number) {
-        super(x, y, boundWidth, wallH);
-    }
-
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = wallColor;
-        floorFillRectDim(ctx, this.x, this.y, this.w, this.h);
-    }
-}
-
-class Bound implements ICollideable, IDrawable {
-    top: CollideRect;
-    bottom: CollideRect;
-    
-    constructor(x: number, w: number, topH: number, dist: number) {
-        this.top = new CollideRect(x, 0, w, topH);
-        this.bottom = new CollideRect(x, topH + dist, w, 1);
-    }
-
-    draw(ctx: CanvasRenderingContext2D) {
-        this.top.draw(ctx);
-        this.bottom.draw(ctx);
-    }
-
-    collide(player: Player): boolean {
-        return this.top.collide(player) || this.bottom.collide(player);
-    }
-}
-
-class Player implements IDrawable {
-    x: number;
-    y: number;
-    size: number;
-    accel: number = 0;
-    dead: boolean = false;
-
-    constructor() {
-        this.x = 0.1;
-        this.y = 0.5;
-        this.size = 0.02;
-    }
-
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = playerColor;
-        floorFillRectDim(ctx, this.x-this.size/2, this.y-this.size/2, this.size, this.size);
-    }
-
-    tick() {
-        this.y += this.accel;
-        this.accel += gravity;
-    }
-
-    corners(): number[] {
-        return [this.x - this.size/2, this.y - this.size/2, this.x + this.size/2, this.y + this.size/2];
-    }
-
-    jump() {
-        this.accel += jumpAccel;
-    }
 }
