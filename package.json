@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "dev": "./node_modules/copyfiles/copyfiles static/* built && tsc && node built/src/index.js"
+    "dev": "./node_modules/copyfiles/copyfiles static/* built && tsc && node built/src/index.js",
+    "devw": "copyfiles static/* built && tsc && node built/src/index.js"
   },
   "repository": {
     "type": "git",
